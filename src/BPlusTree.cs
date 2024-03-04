@@ -10,5 +10,9 @@ namespace BTreeVisualization
 
 public class BTree<T>(int degree, BufferBlock<(Status status, long id, int numKeys, int[] keys, T[] contents, long altID, int altNumKeys, int[] altKeys, T[] altContents)> bufferBlock)
   {
+    private BPlusTreeNode<T> _Root = new LeafNode<T>(degree, bufferBlock);
+
+    private readonly int _Degree = degree;
+
     
   }
