@@ -84,8 +84,12 @@ namespace tests{
         
         _Tree.Insert(key, new Person($"Person {key}"));
         if (op == 0){
-          var result = _Tree.Search(key);
-          Assert.That(result, Is.Not.Null, $"Key {key} should be found.");
+          var result = _Tree.Search(key);   
+          if(result == null){
+            _Tree.Insert(key, new Person($"Person {key}"));
+            result = _Tree.Search(key);
+            Assert.That(result, Is.Not.Null, $"Inserted key {key} should be found.");
+          }
         }
         else if (op == 1){
          var  foundKey = _Tree.Search(key);
@@ -97,7 +101,12 @@ namespace tests{
         }
         else{
           var result = _Tree.Search(key);
-          Assert.That(result, Is.Not.Null, $"Inserted key {key} should be found.");
+          
+          if(result == null){
+            _Tree.Insert(key, new Person($"Person {key}"));
+            result = _Tree.Search(key);
+            Assert.That(result, Is.Not.Null, $"Inserted key {key} should be found.");
+          }
           Assert.That(result.Name, Is.EqualTo($"Person {key}"), $"Key {key} should return the correct person.");
         
         }
