@@ -7,15 +7,15 @@ using System.Threading.Tasks.Dataflow;
 using System.Text.RegularExpressions;
 using NodeData;
 
-namespace BTreeVisualization
+namespace BTreeVisualization;
 
 public class BPlusLeafNode<T>(int degree, BufferBlock<(Status status,
       long id, int numKeys, int[] keys, T[] contents, long altID,
       int altNumKeys, int[] altKeys, T[] altContents)> bufferBlock)
       : BTreeNode<T>(degree, bufferBlock)
   {
-    BPlusLeafNode<T>? _NextNode;
-    BPlusLeafNode<T>? _PrevNode;
+    BPlusLeafNode<T>? _NextNode = null;
+    BPlusLeafNode<T>? _PrevNode = null;
 
     _NumKeys = keys.Length;
       for (int i = 0; i < keys.Length; i++)
@@ -25,4 +25,4 @@ public class BPlusLeafNode<T>(int degree, BufferBlock<(Status status,
       }
   }
 
-  
+
