@@ -8,3 +8,7 @@ using System.Reflection.Metadata.Ecma335;
 using System.Threading.Tasks.Dataflow;
 namespace BTreeVisualization
 
+public class BTree<T>(int degree, BufferBlock<(Status status, long id, int numKeys, int[] keys, T[] contents, long altID, int altNumKeys, int[] altKeys, T[] altContents)> bufferBlock)
+  {
+    
+  }
