@@ -6,3 +6,5 @@
 .vscode
 .fake
 *.sln
+Tree-Visualization.sln
+.gitignore

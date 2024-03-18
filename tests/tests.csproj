@@ -20,7 +20,7 @@
   <ItemGroup>
     <ProjectReference Include="..\src\BTree-Visualization\BTree-Visualization.csproj" />
   </ItemGroup>
-  <ItemGroup>
+  <!-- <ItemGroup>
     <ProjectReference Include="..\src\BPlusTree-Visualization\BPlusTree-Visualization.csproj" />
-  </ItemGroup>
+  </ItemGroup> -->
 </Project>
