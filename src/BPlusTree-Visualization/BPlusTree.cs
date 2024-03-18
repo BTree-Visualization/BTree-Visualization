@@ -1,55 +1,39 @@
 /**
-Primary Author: Tristan Anderson
-Secondary Author: Andreas Kramer (for tree height methods)
+Author: Andreas Kramer working with code from Tristan Anderson
 Date: 2024-02-03
-Desc: Maintains the entry point of the BTree data 
+Desc: Maintains the entry point of the B+Tree data 
 structure and initializes root and new node creation in the beginning.
 */
+using System.Reflection.Metadata.Ecma335;
 using System.Threading.Tasks.Dataflow;
+using BTreeVisualization;
 using ThreadCommunication;
-
-namespace BTreeVisualization
+namespace BPlusTreeVisualization
 {
-  public class BTree<T>
+  public class BPlusTree<T>(int degree, BufferBlock<(NodeStatus status, long id, int numKeys, int[] keys, T?[] contents, long altID, int altNumKeys, int[] altKeys, T?[] altContents)> bufferBlock)
   {
     /// <summary>
     /// Entry point of the tree.
     /// </summary>
-    private BTreeNode<T> _Root;
+    private BPlusTreeNode<T> _Root = new BPlusLeafNode<T>(degree, bufferBlock);
     /// <summary>
     /// Determines the number of keys and children per node.
     /// </summary>
-    public readonly int _Degree;
+    private readonly int _Degree = degree;
     /// <summary>
     /// Tracks whether a key of zero is in use in the tree.
     /// </summary>
-    private bool zeroKeyUsed;
-    private BufferBlock<(NodeStatus status, long id, int numKeys, int[] keys, T?[] contents, long altID, int altNumKeys, int[] altKeys, T?[] altContents)> _BufferBlock;
-
-    
-    public BTree(int degree, BufferBlock<(NodeStatus status, long id, int numKeys, int[] keys, T?[] contents, long altID, int altNumKeys, int[] altKeys, T?[] altContents)> bufferBlock)
-    {
-      _Degree = degree;
-      _Root = new LeafNode<T>(degree, bufferBlock);
-      zeroKeyUsed = false;
-      _BufferBlock = bufferBlock;
-      _BufferBlock.SendAsync((NodeStatus.Inserted, _Root.ID, _Root.NumKeys, _Root.Keys, _Root.Contents, 0, -1, [], []));
-    }
+    private bool zeroKeyUsed = false;
 
     /// <summary>
     /// Takes a node and the key and data to place into root.
     /// </summary>
     /// <remarks>Author: Tristan Anderson</remarks>
     /// <param name="rNode">Value returned from InsertKey on _Root node.</param>
-    private void Split(((int, T), BTreeNode<T>) rNode)
+    private void Split(((int, T), BPlusTreeNode<T>) rNode)
     {
-      _Root = new NonLeafNode<T>(_Degree, [rNode.Item1.Item1], [rNode.Item1.Item2]
-        , [_Root, rNode.Item2], _BufferBlock);
-      _BufferBlock.SendAsync((NodeStatus.Inserted, _Root.ID, _Root.NumKeys, _Root.Keys, _Root.Contents, 0, -1, [], []));
-      _BufferBlock.SendAsync((NodeStatus.Shift, _Root.ID, -1, [], [], (((NonLeafNode<T>)_Root).Children[0]
-        ?? throw new NullChildReferenceException($"Child of new root node at index:0")).ID, -1, [], []));
-      _BufferBlock.SendAsync((NodeStatus.Shift, _Root.ID, -1, [], [], (((NonLeafNode<T>)_Root).Children[1]
-        ?? throw new NullChildReferenceException($"Child of new root node at index:1")).ID, -1, [], []));
+      _Root = new BPlusNonLeafNode<T>(_Degree, [rNode.Item1.Item1]
+        , [_Root, rNode.Item2],bufferBlock);
     }
 
     /// <summary>
@@ -69,18 +53,18 @@ namespace BTreeVisualization
           allow a zero key insertion*/
         if (key == 0)
           zeroKeyUsed = true;
-        _BufferBlock.SendAsync((NodeStatus.Insert, 0, -1, [key], [data], 0, -1, [], []));
-        ((int, T?), BTreeNode<T>?) result = _Root.InsertKey(key, data);
-        if (result.Item2 != null && result.Item1.Item2 != null)
+        bufferBlock.SendAsync((NodeStatus.Insert, 0, -1, [], [], 0, -1, [], []));
+        ((int, T?), BPlusTreeNode<T>?) result = _Root.InsertKey(key, data);
+        if (result.Item2 != null || result.Item1.Item2 != null)
         {
-#pragma warning disable CS8620 // Argument cannot be used for parameter due to differences in the nullability of reference types.
+            #pragma warning disable CS8620 // Argument cannot be used for parameter due to differences in the nullability of reference types.
           Split(result);
-#pragma warning restore CS8620 // Argument cannot be used for parameter due to differences in the nullability of reference types.
+            #pragma warning restore CS8620 // Argument cannot be used for parameter due to differences in the nullability of reference types.
         }
       }
       else
       {
-        _BufferBlock.SendAsync((NodeStatus.Inserted, 0, -1, [], [], 0, -1, [], []));
+        bufferBlock.SendAsync((NodeStatus.Inserted, 0, -1, [], [], 0, -1, [], []));
       }
     }
 
@@ -94,21 +78,21 @@ namespace BTreeVisualization
     /// <remarks>Author: Tristan Anderson,
     /// Date: 2024-02-18</remarks>
     /// <param name="key">Integer to search for and delete if found.</param>
+/*
     public void Delete(int key)
     {
-      _BufferBlock.SendAsync((NodeStatus.Delete, 0, -1, [], [], 0, -1, [], []));
+      bufferBlock.SendAsync((Status.Delete, 0, -1, [], [], 0, -1, [], []));
       if (key == 0 && zeroKeyUsed)
         zeroKeyUsed = false; // After deletion there will no longer be a zero key in use, thus must re-enable insertion of zero
       _Root.DeleteKey(key);
-      if (_Root.NumKeys == 0 && _Root as NonLeafNode<T> != null)
+      if (_Root.NumKeys == 0 && _Root as BPlusNonLeafNode<T> != null)
       {
-        long temp = _Root.ID;
-        _Root = ((NonLeafNode<T>)_Root).Children[0]
-          ?? throw new NullChildReferenceException(
-            $"Child of child on root node");
-        _BufferBlock.SendAsync((NodeStatus.Merge, _Root.ID, _Root.NumKeys, _Root.Keys, _Root.Contents, temp, -1, [], []));
+        _Root = ((BPlusNonLeafNode<T>)_Root).Children[0]
+        ?? throw new NullChildReferenceException(
+            $"Child of child on root node");;
       }
     }
+    */
 
     /// <summary>
     /// Using searchKey on the nodes to return the data 
@@ -119,17 +103,20 @@ namespace BTreeVisualization
     /// <returns>Data object stored under key.</returns>
     public T? Search(int key)
     {
-      _BufferBlock.SendAsync((NodeStatus.Search, 0, -1, [], [], 0, -1, [], []));
-      (int, BTreeNode<T>?) result = _Root.SearchKey(key);
+      bufferBlock.SendAsync((NodeStatus.Search, 0, -1, [], [], 0, -1, [], []));
+      (int, BPlusTreeNode<T>?) result = _Root.SearchKey(key);
       if (result.Item1 == -1 || result.Item2 == null)
       {
         return default;
       }
-      else
-      {
-        return result.Item2.Contents[result.Item1];
-      }
+      else if(result.Item2 is BPlusLeafNode<T> leaf){
+          return leaf.Contents[result.Item1];
+        }else{
+          throw new InvalidOperationException("Unexpected return type.");
+        }       
     }
+
+  
 
     /// <summary>
     /// Invokes Traverse recursively through out the 
@@ -143,7 +130,7 @@ namespace BTreeVisualization
     }
     
     public void Clear(){
-      _Root = new LeafNode<T>(_Degree,_BufferBlock);
+      _Root = new BPlusLeafNode<T>(_Degree, bufferBlock);
     }
 
     /// <summary>
@@ -157,8 +144,8 @@ namespace BTreeVisualization
         return 0;
       }
       int height = 1;
-      BTreeNode<T> currentNode = _Root;
-      while(currentNode is NonLeafNode<T> nonLeafNode && nonLeafNode.Children.Length > 0)
+      BPlusTreeNode<T> currentNode = _Root;
+      while(currentNode is BPlusNonLeafNode<T> nonLeafNode && nonLeafNode.Children.Length > 0)
       {
         currentNode = nonLeafNode.Children[0] ?? throw new NullChildReferenceException(
           $"Child at index:0 within node:{nonLeafNode.ID}");
@@ -176,11 +163,12 @@ namespace BTreeVisualization
     public int GetMinHeight(){
       return GetMinHeight(_Root,0);
     }
-    static private int GetMinHeight(BTreeNode<T> node, int currentLevel){
-      if(node == null || node is LeafNode<T>){
+
+    private int GetMinHeight(BPlusTreeNode<T> node, int currentLevel){
+      if(node == null || node is BPlusLeafNode<T>){
         return currentLevel + 1;
       }
-      if(node is NonLeafNode<T> nonLeafNode){
+      if(node is BPlusNonLeafNode<T> nonLeafNode){
         int minHeight = int.MaxValue;
         foreach(var child in nonLeafNode.Children){
           if(child != null){
@@ -204,11 +192,12 @@ namespace BTreeVisualization
     public int GetMaxHeight(){
       return GetMaxHeight(_Root,0);
     }
-    private int GetMaxHeight(BTreeNode<T> node, int currentLevel){
-      if(node == null || node is LeafNode<T>){
+
+    private int GetMaxHeight(BPlusTreeNode<T> node, int currentLevel){
+      if(node == null || node is BPlusLeafNode<T>){
         return currentLevel + 1;
       }
-      if(node is NonLeafNode<T> nonLeafNode){
+      if(node is BPlusNonLeafNode<T> nonLeafNode){
         int maxHeight = currentLevel;
         foreach(var child in nonLeafNode.Children){
           if(child != null){
@@ -237,9 +226,8 @@ namespace BTreeVisualization
         int leafLevel = -1; 
         return CheckNodeBalance(_Root, 0, ref leafLevel);
     }
-
-    static private bool CheckNodeBalance(BTreeNode<T> node, int currentLevel, ref int leafLevel) {
-        if (node is LeafNode<T>) {
+    private bool CheckNodeBalance(BPlusTreeNode<T> node, int currentLevel, ref int leafLevel) {
+        if (node is BPlusLeafNode<T>) {
             if (leafLevel == -1) {
                 leafLevel = currentLevel;
                 return true;
@@ -247,7 +235,7 @@ namespace BTreeVisualization
             return currentLevel == leafLevel;
         }
 
-        if (node is NonLeafNode<T> nonLeafNode) {
+        if (node is BPlusNonLeafNode<T> nonLeafNode) {
             foreach (var child in nonLeafNode.Children) {
                 if (child != null && !CheckNodeBalance(child, currentLevel + 1, ref leafLevel)) {
                     return false;
@@ -263,7 +251,7 @@ namespace BTreeVisualization
     /// <returns>Count of all keys.</returns>
     public long KeyCount(){
       if (_Root as NonLeafNode<T> != null)
-        return NonLeafNode<T>.KeyCount((NonLeafNode<T>)_Root);
+        return BPlusNonLeafNode<T>.KeyCount((BPlusNonLeafNode<T>)_Root);
       else
         return _Root.NumKeys;
     }
@@ -274,7 +262,7 @@ namespace BTreeVisualization
     /// <returns>Count of all keys.</returns>
     public int NodeCount(){
       if (_Root as NonLeafNode<T> != null)
-        return NonLeafNode<T>.NodeCount((NonLeafNode<T>)_Root);
+        return BPlusNonLeafNode<T>.NodeCount((BPlusNonLeafNode<T>)_Root);
       else
         return 1;
     }

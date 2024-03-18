@@ -1,12 +1,9 @@
-/**
-Author: Tristan Anderson
-Date: 2024-02-03
-Desc: Base class for all the node objects used in the BTree and B+Tree.
-*/
 using System.Threading.Tasks.Dataflow;
+
 using ThreadCommunication;
 
-namespace BTreeVisualization
+
+namespace BPlusTreeVisualization
 {
   /// <summary>
   /// Base class for all the node objects used in the BTree and B+Tree.
@@ -32,13 +29,13 @@ namespace BTreeVisualization
     /// </summary>
     protected long _ID = DateTime.Now.Ticks;
     /// <summary>
-    /// Current count of key entries to this node. Marks the last index - 1 to perceive in _Keys[] and _Contents[].
+    /// Current count of key entries to this node. Marks the last index - 1 to perceive in _Keys[]
     /// </summary>
     protected int _NumKeys = 0;
     /// <summary>
     /// Holds key entries for this node.
     /// </summary>
-    protected int[] _Keys = new int[2 * degree - 1];
+    protected int[] _Keys = new int[degree];
 
     /// <summary>
     /// Find a key in this node or in its children.
@@ -51,8 +48,9 @@ namespace BTreeVisualization
     /// </summary>
     /// <returns>The new node created from the split and the dividing key with
     /// corresponding content as ((dividing Key, Content), new Node).</returns>
-    public abstract ((int, T), N) Split();
-    /// <summary>
+    //public abstract ((int, T), N) Split();
+    /*
+  /// <summary>
     /// Append the entry between this node and its sibiling.
     /// Then append all the entries from the sibiling to this node.
     /// </summary>
@@ -99,14 +97,16 @@ namespace BTreeVisualization
     /// Checks if this node is at max capacity.
     /// </summary>
     /// <returns>True if it is full.</returns>
+    /// */
     public bool IsFull()
     {
-      return _NumKeys == 2 * _Degree - 1;
+      return _NumKeys > _Degree - 1;
     }
     /// <summary>
     /// Checks if this node is below minimum capacity.
     /// </summary>
     /// <returns>True if it is below.</returns>
+    /*
     public bool IsUnderflow()
     {
       return _NumKeys < _Degree - 1;
@@ -122,6 +122,7 @@ namespace BTreeVisualization
     /// the new node created from the split and the dividing key with
     /// corresponding content as ((dividing Key, Content), new Node).
     /// Otherwise it returns ((-1, null), null).</returns>
+    /// */
     public abstract ((int, T?), N?) InsertKey(int key, T data);
 
     /// <summary>
@@ -129,6 +130,7 @@ namespace BTreeVisualization
     /// </summary>
     /// <remarks>Author: Tristan Anderson, Date: 2024-02-18</remarks>
     /// <param name="key">Integer to search for and delete if found.</param>
+    /*
     public abstract void DeleteKey(int key);
 
     /// <summary>
@@ -145,6 +147,8 @@ namespace BTreeVisualization
     /// <remarks>Author: Tristan Anderson</remarks>
     /// <param name="x">Hierachical Node ID</param>
     /// <returns>String in JSON syntax.</returns>
+    
+    */
     public abstract string Traverse(string x);
     /// <summary>
     /// Getter of _Keys
@@ -204,27 +208,22 @@ namespace BTreeVisualization
   /// <param name="degree">Same as parent node/tree</param>
   /// <param name="bufferBlock">Output Buffer for Status updates to
   /// be externally viewed.</param>
-  public abstract class BTreeNode<T>(int degree, BufferBlock<(NodeStatus status, long id, int numKeys, int[] keys, T?[] contents, long altID, int altNumKeys, int[] altKeys, T?[] altContents)> bufferBlock) : Node<BTreeNode<T>, T>(degree, bufferBlock)
-  {
-    /// <summary>
-    /// Holds children for this node.
-    /// </summary>
-    protected T?[] _Contents = new T[2 * degree - 1];
-
-    /// <summary>
-    /// Getter for _Contents[]
-    /// </summary>
-    public T?[] Contents
+    public abstract class BPlusTreeNode<T>(int degree, BufferBlock<(NodeStatus status, long id, int numKeys, int[] keys, 
+                T?[] contents, long altID, int altNumKeys, int[] altKeys, T?[] altContents)> bufferBlock) 
+                : Node<BPlusTreeNode<T>, T>(degree, bufferBlock)
     {
-      get { return _Contents; }
-    }
-  }
+      /*
+        protected T?[] _Contents = new T[2 * degree - 1];
 
-  /// <summary>
-  /// Thrown when a reference to a content object is null.
-  /// </summary>
-  /// <remarks>Author: Tristan Anderson</remarks>
-  public class NullContentReferenceException : Exception
+        public T?[] Contents{
+            get { return _Contents; }
+        }
+        */
+
+        
+    }
+
+    public class NullContentReferenceException : Exception
   {
     public NullContentReferenceException() : base() { }
     public NullContentReferenceException(string message) : base(message) { }
